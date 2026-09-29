@@ -118,6 +118,22 @@ h2{font-size:15px;font-weight:600;color:var(--muted);margin:22px 0 8px}
 .pick p{color:var(--muted);margin:0 0 26px}
 .pick .opts{display:grid;gap:12px}
 .pick .opts button{border:0;border-radius:18px;padding:20px;font-size:20px;font-weight:600;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:4px;background:var(--paper);border:1.5px solid var(--line);border-radius:999px;padding:4px;margin:14px 0 4px}
+.tabs button{flex:1;border:0;background:none;border-radius:999px;padding:9px;font-weight:600;font-size:16px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.seg{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 4px}
+.chip{cursor:pointer}
+.bars{background:var(--paper);border:1.5px solid var(--line);border-radius:16px;padding:6px 14px}
+.brow{padding:9px 0;border-top:1px solid var(--line)}
+.brow:first-child{border-top:0}
+.brow .bl{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}
+.brow .bl .amt{font-size:15px}
+.bar{height:8px;border-radius:99px;background:var(--bg);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 8px}
+.total h2{margin:0}
+.total .amt{font-size:18px}
+.hint{font-size:14px;color:var(--muted);margin:-4px 0 14px}
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
 .toast.on{opacity:1}
 .coin{animation:drop .6s cubic-bezier(.3,1.4,.6,1)}
@@ -220,9 +236,68 @@ function weekKey(date, payday){
   const diff = (d.getDay() - payday + 7) % 7; d.setDate(d.getDate()-diff);
   return d.toISOString().slice(0,10);
 }
+function sched(st){
+  st = st || {};
+  return { period: st.period==='month'?'month':'week', every: Math.max(1,Math.min(12,Math.round(+st.every||1))),
+    payday: +st.payday||0, monthDay: Math.max(1,Math.min(28,+st.monthDay||1)), anchor: +st.anchor || +st.created || 0 };
+}
+function weekStartOf(ts, payday){ const d=new Date(ts); d.setHours(0,0,0,0); d.setDate(d.getDate()-((d.getDay()-payday+7)%7)); return d; }
+function monthIdxOf(ts, md){ const d=new Date(ts); let i=d.getFullYear()*12+d.getMonth(); if(d.getDate()<md) i--; return i; }
+// key of the allowance period that contains ts (null = schedule hasn't started yet)
+function periodKey(st, ts){
+  const s = sched(st), anc = s.anchor || ts;
+  if(s.period==='week'){
+    const a = weekStartOf(anc, s.payday), c = weekStartOf(ts, s.payday);
+    const w = Math.round((c-a)/(7*864e5)); if(w<0) return null;
+    const b = new Date(a); b.setDate(b.getDate()+Math.floor(w/s.every)*s.every*7);
+    return 'w:'+b.getFullYear()+'-'+(b.getMonth()+1)+'-'+b.getDate();
+  }
+  const a = monthIdxOf(anc, s.monthDay), c = monthIdxOf(ts, s.monthDay);
+  if(c<a) return null;
+  return 'm:'+(a+Math.floor((c-a)/s.every)*s.every);
+}
+// first payment date of a new schedule: the next payday, today included
+function nextAnchor(r, ts){
+  const t0 = new Date(ts); t0.setHours(0,0,0,0);
+  if(r.period==='week'){ const d = weekStartOf(ts, r.payday); if(d < t0) d.setDate(d.getDate()+7); return d.getTime(); }
+  let d = new Date(t0.getFullYear(), t0.getMonth(), r.monthDay);
+  if(d < t0) d = new Date(t0.getFullYear(), t0.getMonth()+1, r.monthDay);
+  return d.getTime();
+}
 function allowanceDue(){
   const st = S.settings; if(!st || !(+st.weekly>0)) return false;
-  return st.lastPaidWeek !== weekKey(Date.now(), +st.payday||0);
+  const now = Date.now(), k = periodKey(st, now), s = sched(st);
+  if(!k || st.lastPaidKey === k) return false;
+  if(!st.lastPaidKey && s.period==='week' && s.every===1 && st.lastPaidWeek === weekKey(now, s.payday)) return false; // older versions
+  return true;
+}
+function scheduleText(st){
+  const s = sched(st);
+  if(s.period==='week') return (s.every===1?'כל שבוע':s.every===2?'כל שבועיים':`כל ${s.every} שבועות`)+' ביום '+DAYS[s.payday];
+  return (s.every===1?'כל חודש':s.every===2?'כל חודשיים':`כל ${s.every} חודשים`)+' ב-'+s.monthDay+' לחודש';
+}
+function schedFields(st){
+  const s = sched(st), amt = st ? (+st.weekly||0) : 20;
+  return `<div class="field"><label for="wk">סכום דמי הכיס (₪)</label><input id="wk" type="number" inputmode="decimal" min="0" value="${amt}"></div>
+    <div class="row2">
+      <div class="field" style="flex:1"><label for="ev">כל כמה</label><input id="ev" type="number" inputmode="numeric" min="1" max="12" value="${s.every}"></div>
+      <div class="field" style="flex:1.4"><label for="pr">שבועות או חודשים</label><select id="pr">
+        <option value="week" ${s.period==='week'?'selected':''}>שבועות</option><option value="month" ${s.period==='month'?'selected':''}>חודשים</option></select></div>
+    </div>
+    <div class="field" id="fw"><label for="pd">באיזה יום בשבוע</label><select id="pd">${DAYS.map((d,i)=>`<option value="${i}" ${i===(st?s.payday:5)?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="field" id="fm"><label for="md">באיזה יום בחודש</label><select id="md">${Array.from({length:28},(_,i)=>`<option value="${i+1}" ${i+1===s.monthDay?'selected':''}>${i+1}</option>`).join('')}</select></div>
+    <div class="hint" id="sh"></div>`;
+}
+function readSched(){
+  return { weekly: Math.max(0,+$('#wk').value||0), period: $('#pr').value, every: Math.max(1,Math.min(12,Math.round(+$('#ev').value||1))),
+    payday: +$('#pd').value, monthDay: +$('#md').value };
+}
+function bindSched(showFirst){
+  const upd = ()=>{ const r = readSched(); $('#fw').style.display = r.period==='week'?'':'none'; $('#fm').style.display = r.period==='month'?'':'none';
+    const first = showFirst && showFirst(r) ? ' · התשלום הראשון: ' + new Date(nextAnchor(r, Date.now())).toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'numeric'}) : '';
+    $('#sh').textContent = (r.weekly>0 ? '₪'+fmt(r.weekly)+' ' : '') + scheduleText(r) + first; };
+  ['#wk','#ev','#pr','#pd','#md'].forEach(q=>{ $(q).addEventListener('input',upd); $(q).addEventListener('change',upd); });
+  upd();
 }
 const names = () => ({ parent: (S.settings && S.settings.parentLabel) || 'אבא', child: (S.settings && S.settings.childName) || 'הבת' });
 function when(ts){
@@ -294,19 +369,17 @@ function renderSetup(){
     <p style="text-align:center">כמה פרטים, ואפשר להתחיל. (אם את הילדה, בקשי מההורה ליצור לך משתמש.)</p>
     <div class="field"><label for="cn">שם הבת</label><input id="cn" placeholder="למשל: נועה" autocomplete="off"></div>
     <div class="field"><label for="pl">איך היא קוראת לך?</label><input id="pl" value="אבא" autocomplete="off"></div>
-    <div class="row2">
-      <div class="field" style="flex:1"><label for="wk">דמי כיס שבועיים (₪)</label><input id="wk" type="number" inputmode="decimal" min="0" value="20"></div>
-      <div class="field" style="flex:1"><label for="pd">ביום</label><select id="pd">${DAYS.map((d,i)=>`<option value="${i}" ${i===5?'selected':''}>${d}</option>`).join('')}</select></div>
-    </div>
+    ${schedFields(null)}
     <div class="field"><label for="sb">כמה כסף יש לה כבר עכשיו? (₪)</label><input id="sb" type="number" inputmode="decimal" min="0" value="0"></div>
     <div class="err" id="er"></div>
     <button class="primary" id="go">פתיחת הקופה</button>
     <button class="ghost" id="lo">יציאה מהחשבון</button>
   </div>`, ()=>{
+    bindSched(()=>true);
     $('#lo').onclick = logout;
     $('#go').onclick = async () => {
       const cn = $('#cn').value.trim(); if(!cn){ $('#er').textContent='צריך שם כדי להמשיך'; return; }
-      const st = { childName:cn, parentLabel:$('#pl').value.trim()||'אבא', weekly:Math.max(0,+$('#wk').value||0), payday:+$('#pd').value, lastPaidWeek:'', goal:null, created:Date.now() };
+      const st = { childName:cn, parentLabel:$('#pl').value.trim()||'אבא', ...readSched(), anchor:nextAnchor(readSched(), Date.now()), lastPaidKey:'', goal:null, created:Date.now() };
       const start = +$('#sb').value||0;
       $('#go').disabled = true;
       try{
@@ -329,6 +402,70 @@ function jarSVG(fill){
     <path d="M50 62 Q40 70 40 92 L40 200 Q40 228 70 228 L160 228 Q190 228 190 200 L190 92 Q190 70 180 62 Z" fill="var(--jar)" stroke="var(--ink)" stroke-width="3"/>
     <path d="M56 96 L56 180" stroke="var(--paper)" stroke-width="6" stroke-linecap="round" opacity=".7"/>
   </svg>`;
+}
+
+function txRow(t, N, isP, ro){
+  const cat = t.cat ? CATS.find(c=>c[1]===t.cat) : null;
+  const ic = t.type==='allowance'?'🪙':t.type==='bonus'?'⭐':t.type==='gift'?'🎁':t.type==='request'?'🙋':t.type==='start'?'🏦':t.type==='take'?'↩':(cat?cat[0]:'🛍️');
+  const title = t.note || (t.type==='allowance'?'דמי כיס':t.type==='spend'?(t.cat||'הוצאה'):'');
+  const by = t.by==='parent'?N.parent:N.child;
+  const canDel = !ro && (isP || t.by==='child');
+  return `<div class="row"><div class="ic">${ic}</div>
+    <div class="tx"><div class="t">${esc(title)}</div><div class="s">${when(t.ts)} · ${esc(by)}</div></div>
+    <div class="amt ${t.amount>=0?'p':'m'}">${t.amount>=0?'+':'−'}₪${fmt(Math.abs(t.amount))}</div>
+    ${canDel?`<button class="del" data-del="${t.id}" aria-label="מחיקה">×</button>`:''}</div>`;
+}
+
+/* ---------- details tab ---------- */
+let tab = 'home';
+const det = { range:'month', filter:'all' };
+const RANGES = [['month','החודש'],['prev','חודש שעבר'],['3m','3 חודשים'],['all','הכול']];
+const IN_TYPES = { allowance:['🪙','דמי כיס'], bonus:['⭐','בונוסים'], gift:['🎁','מתנות'], request:['🙋','בקשות שאושרו'] };
+function rangeBounds(r){
+  const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  if(r==='month') return [m0, Infinity];
+  if(r==='prev') return [new Date(now.getFullYear(), now.getMonth()-1, 1).getTime(), m0];
+  if(r==='3m') return [new Date(now.getFullYear(), now.getMonth()-2, 1).getTime(), Infinity];
+  return [0, Infinity];
+}
+function barsHTML(groups, total, color){
+  const rows = Object.values(groups).sort((a,b)=>b.sum-a.sum);
+  if(!rows.length) return `<div class="bars"><div class="empty" style="padding:14px 0">אין כאן כלום בתקופה הזאת</div></div>`;
+  return `<div class="bars">${rows.map(g=>`<div class="brow"><div class="bl"><span>${g.ic} ${esc(g.label)} <span style="color:var(--muted);font-size:14px">(${g.n})</span></span><span class="amt">₪${fmt(g.sum)}</span></div>
+    <div class="bar"><i style="width:${total?Math.max(3,g.sum/total*100):0}%;background:${color}"></i></div></div>`).join('')}</div>`;
+}
+function detailsHTML(N, isP, ro){
+  const [a,b] = rangeBounds(det.range);
+  const inRange = S.tx.filter(t=>t.ts>=a && t.ts<b);
+  const inc = {}, out = {}; let tin = 0, tout = 0;
+  inRange.forEach(t=>{
+    if(t.type==='start') return;
+    if(t.amount > 0){
+      const [ic,label] = IN_TYPES[t.type] || ['➕','אחר'];
+      const g = inc[label] || (inc[label] = {ic,label,sum:0,n:0}); g.sum += t.amount; g.n++; tin += t.amount;
+    } else if(t.amount < 0){
+      let ic, label;
+      if(t.type==='take'){ ic='↩'; label='משיכות ותיקונים'; }
+      else { const c = t.cat ? CATS.find(x=>x[1]===t.cat) : null; ic = c ? c[0] : '🛍️'; label = c ? c[1] : 'בלי קטגוריה'; }
+      const g = out[label] || (out[label] = {ic,label,sum:0,n:0}); g.sum += -t.amount; g.n++; tout += -t.amount;
+    }
+  });
+  const list = inRange.filter(t => det.filter==='in' ? t.amount>0 : det.filter==='out' ? t.amount<0 : true);
+  const net = tin - tout;
+  return `
+    <div class="seg">${RANGES.map(([k,l])=>`<button class="chip ${det.range===k?'on':''}" data-range="${k}">${l}</button>`).join('')}</div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><div class="v" style="color:var(--mint)">+₪${fmt(tin)}</div><div class="k">נכנס</div></div>
+      <div class="stat"><div class="v" style="color:var(--coral)">−₪${fmt(tout)}</div><div class="k">יצא</div></div>
+      <div class="stat"><div class="v">${net<0?'−':''}₪${fmt(Math.abs(net))}</div><div class="k">${net>=0?'נחסך':'יותר הוצאות'}</div></div>
+    </div>
+    <div class="total"><h2>מאיפה הגיע הכסף</h2><span class="amt p">₪${fmt(tin)}</span></div>
+    ${barsHTML(inc, tin, 'var(--mint)')}
+    <div class="total"><h2>על מה הוצא</h2><span class="amt m">₪${fmt(tout)}</span></div>
+    ${barsHTML(out, tout, 'var(--coral)')}
+    <div class="total"><h2>כל התנועות</h2></div>
+    <div class="seg" style="margin-top:0">${[['all','הכול'],['in','נכנס'],['out','יצא']].map(([k,l])=>`<button class="chip ${det.filter===k?'on':''}" data-flt="${k}">${l}</button>`).join('')}</div>
+    <div class="list" style="margin-top:10px">${list.slice(0,200).map(t=>txRow(t,N,isP,ro)).join('') || '<div class="empty">אין תנועות בתקופה הזאת</div>'}</div>`;
 }
 
 function renderMain(){
@@ -370,36 +507,32 @@ function renderMain(){
            ${!isP && !ro && r.status!=='pending' ? `<button class="del" data-dr="${r.id}" aria-label="הסרה">×</button>`:''}`}
     </div>`).join('');
 
-  const txRows = S.tx.slice(0,60).map(t=>{
-    const cat = t.cat ? CATS.find(c=>c[1]===t.cat) : null;
-    const ic = t.type==='allowance'?'🪙':t.type==='bonus'?'⭐':t.type==='gift'?'🎁':t.type==='request'?'🙋':t.type==='start'?'🏦':t.type==='take'?'↩':(cat?cat[0]:'🛍️');
-    const title = t.note || (t.type==='allowance'?'דמי כיס':t.type==='spend'?(t.cat||'הוצאה'):'');
-    const by = t.by==='parent'?N.parent:N.child;
-    const canDel = !ro && (isP || t.by==='child');
-    return `<div class="row"><div class="ic">${ic}</div>
-      <div class="tx"><div class="t">${esc(title)}</div><div class="s">${when(t.ts)} · ${esc(by)}</div></div>
-      <div class="amt ${t.amount>=0?'p':'m'}">${t.amount>=0?'+':'−'}₪${fmt(Math.abs(t.amount))}</div>
-      ${canDel?`<button class="del" data-del="${t.id}" aria-label="מחיקה">×</button>`:''}</div>`;
-  }).join('');
+  const txRows = S.tx.slice(0,60).map(t=>txRow(t,N,isP,ro)).join('');
 
   app.innerHTML = `
     <div class="top"><div><h1>הקופה של ${esc(N.child)}</h1>
       <div class="sync">${S.online?'מסונכרן בין המכשירים':'אין חיבור, מציג נתונים אחרונים'}</div></div>
       <button class="who" id="sw" aria-label="החשבון שלי">${esc((S.me&&S.me.username)||(isP?N.parent:N.child))}</button></div>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="home" aria-selected="${tab==='home'}">הקופה</button><button role="tab" data-tab="details" aria-selected="${tab==='details'}">פירוט</button></div>
+    ${tab==='details' ? detailsHTML(N,isP,ro) : `
     <div class="hero ${grew?'coin':''}">${jarSVG(fill)}
       <div class="bal"><div class="n">${fmt(bal)}<small>₪</small></div><div class="l">${isP?'יש לה בקופה':'יש לי בקופה'}</div></div></div>
     <div class="goal">${goalLine}</div>
-    ${isP && !ro && allowanceDue() ? `<div class="banner"><span>הגיע יום ${DAYS[+st.payday||0]} · דמי כיס של השבוע</span><button data-a="allow">להוסיף ₪${fmt(+st.weekly)}</button></div>`:''}
+    ${isP && !ro && allowanceDue() ? `<div class="banner"><span>הגיע הזמן לדמי הכיס<br><small style="font-weight:400">${scheduleText(st)}</small></span><button data-a="allow">להוסיף ₪${fmt(+st.weekly)}</button></div>`:''}
     <div class="actions">${actions}</div>
     ${(isP ? pending.length : S.req.length) ? `<h2>${isP?'בקשות שמחכות לך':'הבקשות שלי'}</h2><div class="list">${reqRows}</div>`:''}
-    <h2>החודש</h2>
+    <h2>החודש <button class="chip" data-tab="details" style="font-size:13px;padding:3px 10px;margin-inline-start:6px">לפירוט</button></h2>
     <div class="stats"><div class="stat"><div class="v" style="color:var(--mint)">+₪${fmt(mIn)}</div><div class="k">נכנס</div></div>
       <div class="stat"><div class="v" style="color:var(--coral)">−₪${fmt(mOut)}</div><div class="k">יצא</div></div></div>
     <h2>מה קרה בקופה</h2>
-    <div class="list">${txRows || `<div class="empty">עוד אין תנועות. ${isP?'אפשר להתחיל מדמי הכיס של השבוע.':'כשתוציאי או תקבלי כסף, רשמי את זה כאן.'}</div>`}</div>
+    <div class="list">${txRows || `<div class="empty">עוד אין תנועות. ${isP?'אפשר להתחיל מדמי הכיס הראשונים.':'כשתוציאי או תקבלי כסף, רשמי את זה כאן.'}</div>`}</div>
+    `}
     <div class="foot">${isP && !ro ? '<button id="set">הגדרות</button>':''}</div>`;
 
   $('#sw').onclick = openAccount;
+  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; render(); window.scrollTo(0,0); });
+  app.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{ det.range=b.dataset.range; render(); });
+  app.querySelectorAll('[data-flt]').forEach(b=>b.onclick=()=>{ det.filter=b.dataset.flt; render(); });
   app.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>openAction(b.dataset.a));
   app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ if(confirm('למחוק את התנועה הזאת?')) safe(()=>store.delTx(b.dataset.del),'נמחק'); });
   app.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>approve(b.dataset.ok,true));
@@ -437,8 +570,8 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
 function openAction(a){
   const N = names(), st = S.settings, isP = role==='parent', by = isP?'parent':'child';
   if(a==='allow'){
-    const wk = weekKey(Date.now(), +st.payday||0);
-    safe(async()=>{ await store.addTx({amount:+st.weekly,type:'allowance',note:'דמי כיס',by:'parent',ts:Date.now()}); await store.updateSettings({lastPaidWeek:wk}); },'נוסף לקופה 🪙');
+    const k = periodKey(st, Date.now());
+    safe(async()=>{ await store.addTx({amount:+st.weekly,type:'allowance',note:'דמי כיס',by:'parent',ts:Date.now()}); if(k) await store.updateSettings({lastPaidKey:k}); },'נוסף לקופה 🪙');
     return;
   }
   if(a==='goal'){
@@ -489,10 +622,8 @@ function openSettings(){
   openSheet(`<h3>הגדרות</h3>
     <div class="field"><label for="cn">שם הבת</label><input id="cn" value="${esc(st.childName)}"></div>
     <div class="field"><label for="pl">איך היא קוראת לך?</label><input id="pl" value="${esc(st.parentLabel||'אבא')}"></div>
-    <div class="row2">
-      <div class="field" style="flex:1"><label for="wk">דמי כיס שבועיים (₪)</label><input id="wk" type="number" inputmode="decimal" min="0" value="${+st.weekly||0}"></div>
-      <div class="field" style="flex:1"><label for="pd">ביום</label><select id="pd">${DAYS.map((d,i)=>`<option value="${i}" ${i===(+st.payday||0)?'selected':''}>${d}</option>`).join('')}</select></div>
-    </div>
+    <h2>דמי כיס</h2>
+    ${schedFields(st)}
     <button class="primary" id="sv">שמירה</button>
     <h2>המשתמש של ${esc(st.childName)}</h2>
     ${kids.length ? `
@@ -505,8 +636,14 @@ function openSettings(){
       <div class="err" id="er"></div>
       <button class="primary" id="mk" style="background:var(--lilac)">יצירת המשתמש שלה</button>`}
     <button class="ghost" data-close>סגירה</button>`, ()=>{
+    const old = sched(st);
+    const changed = r => r.period!==old.period || r.every!==old.every || (r.period==='week' ? r.payday!==old.payday : r.monthDay!==old.monthDay);
+    bindSched(changed);
     $('#sv').onclick = async()=>{
-      const o = { childName:$('#cn').value.trim()||st.childName, parentLabel:$('#pl').value.trim()||'אבא', weekly:Math.max(0,+$('#wk').value||0), payday:+$('#pd').value };
+      const r = readSched();
+      const o = { childName:$('#cn').value.trim()||st.childName, parentLabel:$('#pl').value.trim()||'אבא', ...r };
+      // a new schedule starts from the next payment date
+      if(changed(r)){ o.anchor = nextAnchor(r, Date.now()); o.lastPaidKey = ''; }
       if(await safe(()=>store.updateSettings(o),'נשמר')) closeSheet();
     };
     const mk = $('#mk'); if(mk) mk.onclick = async()=>{
