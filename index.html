@@ -52,7 +52,7 @@ button{cursor:pointer}
 .hero svg{position:absolute;inset:0;width:100%;height:100%}
 .bal{position:absolute;inset:78px 0 0;text-align:center}
 .bal .n{font-family:var(--display);font-size:52px;line-height:1;letter-spacing:-1px}
-.bal .n small{font-size:26px;margin-inline-start:2px}
+.bal .n small{font-size:26px;margin-right:4px}
 .bal .l{font-size:14px;color:var(--muted);margin-top:4px}
 .goal{text-align:center;font-size:15px;color:var(--muted);margin:2px 0 16px}
 .goal b{color:var(--ink);font-weight:600}
@@ -516,7 +516,7 @@ function renderMain(){
     <div class="tabs" role="tablist"><button role="tab" data-tab="home" aria-selected="${tab==='home'}">הקופה</button><button role="tab" data-tab="details" aria-selected="${tab==='details'}">פירוט</button></div>
     ${tab==='details' ? detailsHTML(N,isP,ro) : `
     <div class="hero ${grew?'coin':''}">${jarSVG(fill)}
-      <div class="bal"><div class="n">${fmt(bal)}<small>₪</small></div><div class="l">${isP?'יש לה בקופה':'יש לי בקופה'}</div></div></div>
+      <div class="bal"><div class="n" dir="ltr">${bal<0?'−':''}<small>₪</small>${fmt(Math.abs(bal))}</div><div class="l">${isP?'יש לה בקופה':'יש לי בקופה'}</div></div></div>
     <div class="goal">${goalLine}</div>
     ${isP && !ro && allowanceDue() ? `<div class="banner"><span>הגיע הזמן לדמי הכיס<br><small style="font-weight:400">${scheduleText(st)}</small></span><button data-a="allow">להוסיף ₪${fmt(+st.weekly)}</button></div>`:''}
     <div class="actions">${actions}</div>
