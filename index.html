@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>הקופה שלנו · דמי כיס</title>
+<meta name="theme-color" content="#123B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="הקופה">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Suez+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAF4EE; --paper:#FFFFFF; --ink:#123B2E; --muted:#5C7A6E; --line:#CFE3D7;
+  --gold:#E9B949; --gold-deep:#B8861B; --coral:#E8624A; --lilac:#8E78D6; --mint:#2E9B6F;
+  --jar:rgba(255,255,255,.55); --shadow:0 2px 0 rgba(18,59,46,.12);
+  --body:"Fredoka","Arial Hebrew","Segoe UI",system-ui,sans-serif;
+  --display:"Suez One","Fredoka",Georgia,serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F2620; --paper:#17352C; --ink:#E6F3EC; --muted:#9FBDB0; --line:#2A4E42;
+  --gold:#F0C660; --gold-deep:#F0C660; --coral:#FF8A72; --lilac:#B6A4F2; --mint:#5FD19F;
+  --jar:rgba(255,255,255,.06); --shadow:0 2px 0 rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --bg:#0F2620; --paper:#17352C; --ink:#E6F3EC; --muted:#9FBDB0; --line:#2A4E42;
+  --gold:#F0C660; --gold-deep:#F0C660; --coral:#FF8A72; --lilac:#B6A4F2; --mint:#5FD19F;
+  --jar:rgba(255,255,255,.06); --shadow:0 2px 0 rgba(0,0,0,.35);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--lilac);outline-offset:2px}
+.wrap{max-width:520px;margin:0 auto;padding:14px 16px 40px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top h1{font-family:var(--display);font-weight:400;font-size:22px;margin:0}
+.who{border:1.5px solid var(--line);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:14px;color:var(--muted)}
+.sync{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* jar hero */
+.hero{position:relative;margin:18px auto 6px;width:230px;height:250px}
+.hero svg{position:absolute;inset:0;width:100%;height:100%}
+.bal{position:absolute;inset:78px 0 0;text-align:center}
+.bal .n{font-family:var(--display);font-size:52px;line-height:1;letter-spacing:-1px}
+.bal .n small{font-size:26px;margin-inline-start:2px}
+.bal .l{font-size:14px;color:var(--muted);margin-top:4px}
+.goal{text-align:center;font-size:15px;color:var(--muted);margin:2px 0 16px}
+.goal b{color:var(--ink);font-weight:600}
+.goal button{background:none;border:0;color:var(--lilac);text-decoration:underline;padding:2px 4px;font-size:14px}
+
+.banner{background:var(--gold);color:#3a2a00;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;font-weight:500}
+.banner button{background:#3a2a00;color:#FFF3CF;border:0;border-radius:10px;padding:8px 12px;font-weight:600;white-space:nowrap}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.act{border:0;border-radius:16px;padding:14px 10px;font-weight:600;font-size:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:2px}
+.act span{font-size:24px;line-height:1}
+.act.plus{background:var(--mint);color:#fff}
+.act.minus{background:var(--coral);color:#fff}
+.act.soft{background:var(--paper);color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.act.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:8px}
+
+h2{font-size:15px;font-weight:600;color:var(--muted);margin:22px 0 8px}
+.list{background:var(--paper);border-radius:16px;border:1.5px solid var(--line);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:18px;background:var(--bg);flex:none}
+.tx{flex:1;min-width:0}
+.tx .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .s{font-size:13px;color:var(--muted)}
+.amt{font-weight:600;font-variant-numeric:tabular-nums;direction:ltr}
+.amt.p{color:var(--mint)} .amt.m{color:var(--coral)}
+.del{background:none;border:0;color:var(--muted);font-size:18px;padding:4px 6px;opacity:.6}
+.req .btns{display:flex;gap:6px}
+.req .btns button{border:0;border-radius:10px;padding:7px 10px;font-weight:600;font-size:14px}
+.ok{background:var(--mint);color:#fff}.no{background:var(--bg);color:var(--ink)}
+.tag{font-size:12px;border-radius:999px;padding:2px 8px;background:var(--bg);color:var(--muted)}
+.tag.yes{color:var(--mint)}.tag.nope{color:var(--coral)}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:15px}
+.stats{display:flex;gap:10px;margin-top:6px}
+.stat{flex:1;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat .v{font-weight:600;font-size:19px;direction:ltr;text-align:right}
+.stat .k{font-size:13px;color:var(--muted)}
+.foot{display:flex;justify-content:center;gap:16px;margin-top:26px}
+.foot button{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:14px}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,30,24,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.scrim.on{display:flex}
+.sheet{background:var(--paper);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.coin{animation:none!important}}
+.sheet h3{font-family:var(--display);font-weight:400;font-size:24px;margin:0 0 14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:14px;color:var(--muted);margin-bottom:5px}
+.field input,.field select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);font-size:17px}
+.big input{font-family:var(--display);font-size:34px;text-align:center;direction:ltr}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:15px}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.row2{display:flex;gap:10px}
+.primary{width:100%;border:0;border-radius:14px;padding:14px;background:var(--ink);color:var(--paper);font-weight:600;font-size:17px;margin-top:4px}
+.ghost{width:100%;border:0;background:none;color:var(--muted);padding:12px;margin-top:4px}
+.err{color:var(--coral);font-size:14px;min-height:20px}
+
+/* role pick */
+.pick{min-height:80vh;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.pick h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0 0 6px}
+.pick p{color:var(--muted);margin:0 0 26px}
+.pick .opts{display:grid;gap:12px}
+.pick .opts button{border:0;border-radius:18px;padding:20px;font-size:20px;font-weight:600;box-shadow:var(--shadow)}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.on{opacity:1}
+.coin{animation:drop .6s cubic-bezier(.3,1.4,.6,1)}
+@keyframes drop{from{transform:translateY(-60px);opacity:0}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="scrim" id="scrim"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){const $ = s => document.querySelector(s);
+const app = $('#app');
+const LS = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const LSset = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => { const r = Math.round(n*100)/100; return (Number.isInteger(r) ? r : r.toFixed(2)); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const CATS = [['🍬','ממתקים'],['🎮','משחקים'],['👕','בגדים'],['🎁','מתנה למישהו'],['🍕','אוכל'],['🎟️','בילוי'],['📚','ספרים/ציוד'],['✨','אחר']];
+
+
+let role = null;
+let S = { settings:null, tx:[], req:[], loaded:{settings:false,tx:false}, online:true, canWrite:true, session:null, authChecked:false, me:null };
+let lastBal = null;
+
+/* ---------- Supabase ---------- */
+const CFG = window.PM_CONFIG || {};
+const configured = CFG.url && CFG.anonKey && !CFG.url.includes('YOUR-');
+const sb = configured && window.supabase ? window.supabase.createClient(CFG.url, CFG.anonKey) : null;
+let channel = null, pollT = null;
+
+function toEmail(u){
+  const n = u.trim().toLowerCase();
+  const local = /^[a-z0-9._-]+$/.test(n) ? n : 'u' + [...new TextEncoder().encode(n)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  return local + '@hakupa.app';
+}
+function checkUser(u){ u=u.trim(); if(u.length<2) return 'שם המשתמש קצר מדי'; if(u.length>20) return 'שם המשתמש ארוך מדי (עד 20 תווים)'; if(/[\s@]/.test(u)) return 'בלי רווחים ובלי @'; return ''; }
+function authMsg(e){
+  const m = (e && e.message || '').toLowerCase();
+  if(m.includes('invalid login')) return 'שם משתמש או סיסמה לא נכונים';
+  if(m.includes('already registered') || m.includes('already exists')) return 'שם המשתמש הזה כבר תפוס';
+  if(m.includes('not confirmed')) return 'צריך לכבות את "Confirm email" ב-Supabase (ראו הוראות)';
+  if(m.includes('password')) return 'הסיסמה צריכה להיות לפחות 6 תווים';
+  if(m.includes('rate')) return 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות';
+  return 'משהו השתבש: ' + (e && e.message || '');
+}
+
+async function rpc(fn, args){ const { data, error } = await sb.rpc(fn, args||{}); if(error) throw error; return data; }
+async function refresh(){
+  if(!S.me || !S.me.family) return;
+  try{
+    const d = await rpc('kupa_get');
+    S.settings = d.settings; S.tx = d.tx||[]; S.req = d.requests||[];
+    S.loaded = {settings:true,tx:true}; S.online = true;
+  }catch(e){ S.online = false; S.loaded = {settings:true,tx:true}; }
+  render();
+}
+function ping(){ if(channel) channel.send({type:'broadcast', event:'changed', payload:{}}); }
+async function write(fn, args){ await rpc(fn, args); ping(); await refresh(); }
+const store = {
+  async updateSettings(obj){ await write('kupa_update_settings', {p_patch: obj}); },
+  async addTx(t){ await write('kupa_add_tx', {p_tx: {id:uid(), ...t}}); },
+  async delTx(id){ await write('kupa_del_tx', {p_id:id}); },
+  async addReq(r){ await write('kupa_add_req', {p_req: {id:uid(), ...r}}); },
+  async updReq(id,o){ await write('kupa_set_req_status', {p_id:id, p_status:o.status}); },
+  async delReq(id){ await write('kupa_del_req', {p_id:id}); }
+};
+
+async function loadMe(){
+  try { S.me = await rpc('kupa_me'); } catch(e){ S.me = {family:null}; toast('לא הצלחנו לטעון את החשבון'); }
+  role = S.me && S.me.role;
+  if(S.me && S.me.family) startSync(); else render();
+}
+function startSync(){
+  stopSync();
+  refresh();
+  channel = sb.channel('kupa-'+S.me.family, {config:{broadcast:{self:false}}}).on('broadcast',{event:'changed'},refresh).subscribe();
+  pollT = setInterval(()=>{ if(!document.hidden) refresh(); }, 30000);
+}
+function stopSync(){ if(channel){ sb.removeChannel(channel); channel=null; } clearInterval(pollT); }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && S.me && S.me.family) refresh(); });
+
+async function logout(){
+  closeSheet(); stopSync(); await sb.auth.signOut();
+  S = { settings:null, tx:[], req:[], loaded:{settings:false,tx:false}, online:true, canWrite:true, session:null, authChecked:true, me:null };
+  role = null; lastBal = null; render();
+}
+
+async function safe(fn, okMsg){
+  try { await fn(); if(okMsg) toast(okMsg); return true; }
+  catch(e){ console.error(e); toast(!navigator.onLine ? 'אין חיבור לאינטרנט' : (e && e.message && e.message.includes('not allowed')) ? 'אין הרשאה לפעולה הזאת' : 'השמירה לא הצליחה, נסו שוב'); return false; }
+}
+/* ---------- helpers ---------- */
+const balance = () => S.tx.reduce((a,t)=>a+(+t.amount||0),0);
+function weekKey(date, payday){
+  // start of the "allowance week" that contains date
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const diff = (d.getDay() - payday + 7) % 7; d.setDate(d.getDate()-diff);
+  return d.toISOString().slice(0,10);
+}
+function allowanceDue(){
+  const st = S.settings; if(!st || !(+st.weekly>0)) return false;
+  return st.lastPaidWeek !== weekKey(Date.now(), +st.payday||0);
+}
+const names = () => ({ parent: (S.settings && S.settings.parentLabel) || 'אבא', child: (S.settings && S.settings.childName) || 'הבת' });
+function when(ts){
+  const d = new Date(ts), now = new Date();
+  const day = 864e5, t0 = new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const hm = d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  if(ts >= t0) return 'היום, '+hm;
+  if(ts >= t0-day) return 'אתמול, '+hm;
+  return d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'});
+}
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2200); }
+
+/* ---------- views ---------- */
+function show(name, html, bind, sticky){
+  if(sticky && app.dataset.view === name) return;
+  app.dataset.view = name; app.innerHTML = html; bind && bind();
+}
+function render(){
+  if(!sb) return show('nocfg', `<div class="pick"><h1>כמעט מוכן</h1><p>צריך להדביק את כתובת ה-Supabase והמפתח בקובץ config.js.</p></div>`);
+  if(!S.authChecked) return show('load', '<div class="pick"><p>רגע…</p></div>');
+  if(!S.session) return renderLogin();
+  if(!S.me) return show('load', '<div class="pick"><p>פותחים את הקופה…</p></div>');
+  if(!S.me.family) return renderSetup();
+  if(!S.loaded.tx) return show('load', '<div class="pick"><p>פותחים את הקופה…</p></div>');
+  renderMain();
+}
+
+let loginTab = 'in';
+function renderLogin(){
+  const up = loginTab === 'up';
+  show('login-'+loginTab, `<div class="pick" style="text-align:right">
+    <h1 style="text-align:center">הקופה שלנו</h1>
+    <p style="text-align:center">${up ? 'הרשמה להורה. את המשתמש של הבת יוצרים מתוך האפליקציה.' : 'דמי כיס משותפים להורה ולילדה'}</p>
+    <div class="chips" style="justify-content:center;margin-bottom:18px">
+      <button class="chip ${up?'':'on'}" data-t="in">כניסה</button><button class="chip ${up?'on':''}" data-t="up">הרשמה (הורה)</button></div>
+    <div class="field"><label for="un">שם משתמש</label><input id="un" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+    <div class="field"><label for="pw">סיסמה</label><input id="pw" type="password" autocomplete="${up?'new-password':'current-password'}"></div>
+    ${up?'<div class="field"><label for="pw2">שוב את הסיסמה</label><input id="pw2" type="password" autocomplete="new-password"></div>':''}
+    <div class="err" id="er"></div>
+    <button class="primary" id="go">${up?'יצירת חשבון':'כניסה'}</button>
+  </div>`, ()=>{
+    app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ loginTab=b.dataset.t; render(); });
+    const go = async()=>{
+      const u=$('#un').value, p=$('#pw').value, er=$('#er'); er.textContent='';
+      const bad = checkUser(u); if(bad){ er.textContent=bad; return; }
+      if(p.length<6){ er.textContent='הסיסמה צריכה להיות לפחות 6 תווים'; return; }
+      $('#go').disabled = true;
+      try{
+        if(up){
+          if(p !== $('#pw2').value){ er.textContent='הסיסמאות לא זהות'; return; }
+          const { data, error } = await sb.auth.signUp({ email: toEmail(u), password: p, options:{ data:{ username: u.trim() } } });
+          if(error) throw error;
+          if(!data.session){ er.textContent='החשבון נוצר אבל דורש אישור מייל. צריך לכבות את "Confirm email" ב-Supabase.'; return; }
+        } else {
+          const { error } = await sb.auth.signInWithPassword({ email: toEmail(u), password: p });
+          if(error) throw error;
+        }
+      }catch(e){ er.textContent = authMsg(e); }
+      finally{ const g=$('#go'); if(g) g.disabled=false; }
+    };
+    $('#go').onclick = go;
+    app.querySelectorAll('input').forEach(i=>i.addEventListener('keydown',e=>{ if(e.key==='Enter') go(); }));
+  }, true);
+}
+
+function renderSetup(){
+  show('setup', `<div class="pick" style="text-align:right">
+    <h1 style="text-align:center">פותחים קופה</h1>
+    <p style="text-align:center">כמה פרטים, ואפשר להתחיל. (אם את הילדה, בקשי מההורה ליצור לך משתמש.)</p>
+    <div class="field"><label for="cn">שם הבת</label><input id="cn" placeholder="למשל: נועה" autocomplete="off"></div>
+    <div class="field"><label for="pl">איך היא קוראת לך?</label><input id="pl" value="אבא" autocomplete="off"></div>
+    <div class="row2">
+      <div class="field" style="flex:1"><label for="wk">דמי כיס שבועיים (₪)</label><input id="wk" type="number" inputmode="decimal" min="0" value="20"></div>
+      <div class="field" style="flex:1"><label for="pd">ביום</label><select id="pd">${DAYS.map((d,i)=>`<option value="${i}" ${i===5?'selected':''}>${d}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label for="sb">כמה כסף יש לה כבר עכשיו? (₪)</label><input id="sb" type="number" inputmode="decimal" min="0" value="0"></div>
+    <div class="err" id="er"></div>
+    <button class="primary" id="go">פתיחת הקופה</button>
+    <button class="ghost" id="lo">יציאה מהחשבון</button>
+  </div>`, ()=>{
+    $('#lo').onclick = logout;
+    $('#go').onclick = async () => {
+      const cn = $('#cn').value.trim(); if(!cn){ $('#er').textContent='צריך שם כדי להמשיך'; return; }
+      const st = { childName:cn, parentLabel:$('#pl').value.trim()||'אבא', weekly:Math.max(0,+$('#wk').value||0), payday:+$('#pd').value, lastPaidWeek:'', goal:null, created:Date.now() };
+      const start = +$('#sb').value||0;
+      $('#go').disabled = true;
+      try{
+        await rpc('kupa_create_family', { p_settings: st, p_username: (S.session.user.user_metadata||{}).username || '' });
+        S.me = null; await loadMe();
+        if(start>0) await safe(()=>store.addTx({amount:start,type:'start',note:'יתרת פתיחה',by:'parent',ts:Date.now()}));
+      }catch(e){ $('#er').textContent='לא הצלחנו לפתוח את הקופה, נסו שוב'; const g=$('#go'); if(g) g.disabled=false; }
+    };
+  }, true);
+}
+
+function jarSVG(fill){
+  const h = 150*Math.max(0,Math.min(1,fill)), y = 222-h;
+  return `<svg viewBox="0 0 230 250" aria-hidden="true">
+    <defs><clipPath id="jc"><path d="M50 62 Q40 70 40 92 L40 200 Q40 228 70 228 L160 228 Q190 228 190 200 L190 92 Q190 70 180 62 Z"/></clipPath></defs>
+    <rect x="62" y="30" width="106" height="26" rx="8" fill="var(--gold)" stroke="var(--ink)" stroke-width="3"/>
+    <rect x="98" y="38" width="34" height="6" rx="3" fill="var(--ink)"/>
+    <g clip-path="url(#jc)"><rect x="30" y="${y}" width="170" height="${h+10}" fill="var(--gold)" opacity=".38"/>
+      ${h>6?`<path d="M30 ${y} q20 -7 40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="var(--gold-deep)" stroke-width="2" opacity=".6"/>`:''}</g>
+    <path d="M50 62 Q40 70 40 92 L40 200 Q40 228 70 228 L160 228 Q190 228 190 200 L190 92 Q190 70 180 62 Z" fill="var(--jar)" stroke="var(--ink)" stroke-width="3"/>
+    <path d="M56 96 L56 180" stroke="var(--paper)" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+  </svg>`;
+}
+
+function renderMain(){
+  app.dataset.view = 'main';
+  const N = names(), st = S.settings, bal = balance();
+  const goal = st.goal && +st.goal.amount > 0 ? st.goal : null;
+  const fill = goal ? bal/goal.amount : Math.min(1, bal/Math.max(50,(+st.weekly||20)*6));
+  const grew = lastBal !== null && bal > lastBal; lastBal = bal;
+  const isP = role === 'parent', ro = !S.canWrite;
+  const pending = S.req.filter(r=>r.status==='pending');
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const mIn = S.tx.filter(t=>t.ts>=monthStart && t.amount>0 && t.type!=='start').reduce((a,t)=>a+t.amount,0);
+  const mOut = S.tx.filter(t=>t.ts>=monthStart && t.amount<0).reduce((a,t)=>a-t.amount,0);
+
+  let goalLine = '';
+  if(goal){
+    const left = goal.amount - bal;
+    goalLine = left > 0 ? `חוסכת ל<b>${esc(goal.name)}</b> · נשארו ₪${fmt(left)}` : `יש מספיק ל<b>${esc(goal.name)}</b>! 🎉`;
+    goalLine += ro ? '' : ` <button data-a="goal">שינוי</button>`;
+  } else if(!ro) goalLine = `<button data-a="goal">להציב מטרת חיסכון</button>`;
+
+  let actions = '';
+  if(!ro){
+    actions = isP ? `
+      <button class="act plus" data-a="allow"><span>＋</span>דמי כיס ₪${fmt(+st.weekly||0)}</button>
+      <button class="act plus" data-a="bonus" style="background:var(--lilac)"><span>★</span>בונוס / סכום אחר</button>
+      <button class="act minus" data-a="spend"><span>−</span>הוצאה</button>
+      <button class="act soft" data-a="take"><span>↩</span>משיכה / תיקון</button>` : `
+      <button class="act minus" data-a="spend"><span>−</span>הוצאתי</button>
+      <button class="act plus" data-a="gift"><span>＋</span>קיבלתי כסף</button>
+      <button class="act soft wide" data-a="ask">🙋 בקשה מ${esc(N.parent)}</button>`;
+  }
+
+  const reqRows = S.req.slice(0,8).filter(r => isP ? r.status==='pending' : true).map(r=>`
+    <div class="row req"><div class="ic">🙋</div>
+      <div class="tx"><div class="t">${esc(r.note)||'בקשה'}</div><div class="s">${when(r.ts)} · ₪${fmt(r.amount)}</div></div>
+      ${isP && !ro ? `<div class="btns"><button class="ok" data-ok="${r.id}">לאשר</button><button class="no" data-no="${r.id}">לא הפעם</button></div>`
+        : `<span class="tag ${r.status==='approved'?'yes':r.status==='declined'?'nope':''}">${r.status==='approved'?'אושר':r.status==='declined'?'לא אושר':'ממתין'}</span>
+           ${!isP && !ro && r.status!=='pending' ? `<button class="del" data-dr="${r.id}" aria-label="הסרה">×</button>`:''}`}
+    </div>`).join('');
+
+  const txRows = S.tx.slice(0,60).map(t=>{
+    const cat = t.cat ? CATS.find(c=>c[1]===t.cat) : null;
+    const ic = t.type==='allowance'?'🪙':t.type==='bonus'?'⭐':t.type==='gift'?'🎁':t.type==='request'?'🙋':t.type==='start'?'🏦':t.type==='take'?'↩':(cat?cat[0]:'🛍️');
+    const title = t.note || (t.type==='allowance'?'דמי כיס':t.type==='spend'?(t.cat||'הוצאה'):'');
+    const by = t.by==='parent'?N.parent:N.child;
+    const canDel = !ro && (isP || t.by==='child');
+    return `<div class="row"><div class="ic">${ic}</div>
+      <div class="tx"><div class="t">${esc(title)}</div><div class="s">${when(t.ts)} · ${esc(by)}</div></div>
+      <div class="amt ${t.amount>=0?'p':'m'}">${t.amount>=0?'+':'−'}₪${fmt(Math.abs(t.amount))}</div>
+      ${canDel?`<button class="del" data-del="${t.id}" aria-label="מחיקה">×</button>`:''}</div>`;
+  }).join('');
+
+  app.innerHTML = `
+    <div class="top"><div><h1>הקופה של ${esc(N.child)}</h1>
+      <div class="sync">${S.online?'מסונכרן בין המכשירים':'אין חיבור, מציג נתונים אחרונים'}</div></div>
+      <button class="who" id="sw" aria-label="החשבון שלי">${esc((S.me&&S.me.username)||(isP?N.parent:N.child))}</button></div>
+    <div class="hero ${grew?'coin':''}">${jarSVG(fill)}
+      <div class="bal"><div class="n">${fmt(bal)}<small>₪</small></div><div class="l">${isP?'יש לה בקופה':'יש לי בקופה'}</div></div></div>
+    <div class="goal">${goalLine}</div>
+    ${isP && !ro && allowanceDue() ? `<div class="banner"><span>הגיע יום ${DAYS[+st.payday||0]} · דמי כיס של השבוע</span><button data-a="allow">להוסיף ₪${fmt(+st.weekly)}</button></div>`:''}
+    <div class="actions">${actions}</div>
+    ${(isP ? pending.length : S.req.length) ? `<h2>${isP?'בקשות שמחכות לך':'הבקשות שלי'}</h2><div class="list">${reqRows}</div>`:''}
+    <h2>החודש</h2>
+    <div class="stats"><div class="stat"><div class="v" style="color:var(--mint)">+₪${fmt(mIn)}</div><div class="k">נכנס</div></div>
+      <div class="stat"><div class="v" style="color:var(--coral)">−₪${fmt(mOut)}</div><div class="k">יצא</div></div></div>
+    <h2>מה קרה בקופה</h2>
+    <div class="list">${txRows || `<div class="empty">עוד אין תנועות. ${isP?'אפשר להתחיל מדמי הכיס של השבוע.':'כשתוציאי או תקבלי כסף, רשמי את זה כאן.'}</div>`}</div>
+    <div class="foot">${isP && !ro ? '<button id="set">הגדרות</button>':''}</div>`;
+
+  $('#sw').onclick = openAccount;
+  app.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>openAction(b.dataset.a));
+  app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ if(confirm('למחוק את התנועה הזאת?')) safe(()=>store.delTx(b.dataset.del),'נמחק'); });
+  app.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>approve(b.dataset.ok,true));
+  app.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>approve(b.dataset.no,false));
+  app.querySelectorAll('[data-dr]').forEach(b=>b.onclick=()=>safe(()=>store.delReq(b.dataset.dr)));
+  const s = $('#set'); if(s) s.onclick = openSettings;
+}
+
+function openAccount(){
+  const me = S.me || {};
+  openSheet(`<h3>${esc(me.username || 'החשבון שלי')}</h3>
+    <p style="color:var(--muted);margin:0 0 16px">${role==='parent'?'חשבון הורה':'חשבון של '+esc(names().child)}</p>
+    <button class="primary" id="lo">יציאה מהחשבון</button>
+    <button class="ghost" data-close>סגירה</button>`, ()=>{ $('#lo').onclick = logout; });
+}
+async function approve(id, yes){
+  const r = S.req.find(x=>x.id===id); if(!r) return;
+  if(yes){
+    if(await safe(()=>store.updReq(id,{status:'approved',decidedAt:Date.now()})))
+      await safe(()=>store.addTx({amount:+r.amount,type:'request',note:r.note||'בקשה שאושרה',by:'parent',ts:Date.now()}),'אושר והועבר לקופה');
+  } else safe(()=>store.updReq(id,{status:'declined',decidedAt:Date.now()}),'הבקשה נדחתה');
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html, onOpen){
+  $('#sheet').innerHTML = html; $('#scrim').classList.add('on');
+  const f = $('#sheet').querySelector('input'); if(f) setTimeout(()=>f.focus(),60);
+  const c = $('#sheet').querySelector('[data-close]'); if(c) c.onclick = closeSheet;
+  onOpen && onOpen();
+}
+function closeSheet(){ $('#scrim').classList.remove('on'); }
+$('#scrim').addEventListener('click', e=>{ if(e.target.id==='scrim') closeSheet(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
+
+function openAction(a){
+  const N = names(), st = S.settings, isP = role==='parent', by = isP?'parent':'child';
+  if(a==='allow'){
+    const wk = weekKey(Date.now(), +st.payday||0);
+    safe(async()=>{ await store.addTx({amount:+st.weekly,type:'allowance',note:'דמי כיס',by:'parent',ts:Date.now()}); await store.updateSettings({lastPaidWeek:wk}); },'נוסף לקופה 🪙');
+    return;
+  }
+  if(a==='goal'){
+    const g = st.goal||{};
+    openSheet(`<h3>מטרת חיסכון</h3>
+      <div class="field"><label for="gn">בשביל מה חוסכים?</label><input id="gn" value="${esc(g.name||'')}" placeholder="למשל: אוזניות"></div>
+      <div class="field big"><label for="ga">כמה זה עולה? (₪)</label><input id="ga" type="number" inputmode="decimal" min="1" value="${g.amount||''}"></div>
+      <div class="err" id="er"></div>
+      <button class="primary" id="sv">שמירת המטרה</button>
+      ${st.goal?'<button class="ghost" id="rm">להסיר את המטרה</button>':'<button class="ghost" data-close>ביטול</button>'}`, ()=>{
+      $('#sv').onclick = async()=>{ const n=$('#gn').value.trim(), v=+$('#ga').value; if(!n||!(v>0)){ $('#er').textContent='צריך שם וסכום'; return; }
+        if(await safe(()=>store.updateSettings({goal:{name:n,amount:v}}),'המטרה נשמרה')) closeSheet(); };
+      const rm=$('#rm'); if(rm) rm.onclick = async()=>{ if(await safe(()=>store.updateSettings({goal:null}),'המטרה הוסרה')) closeSheet(); };
+    });
+    return;
+  }
+  const cfg = {
+    spend:{t: isP?'הוצאה מהקופה':'הוצאתי', btn:'רישום ההוצאה', sign:-1, type:'spend', cats:true, ph:'על מה?'},
+    gift:{t:'קיבלתי כסף', btn:'הוספה לקופה', sign:1, type:'gift', ph:'ממי? (למשל: סבתא)'},
+    bonus:{t:'בונוס / סכום אחר', btn:'הוספה לקופה', sign:1, type:'bonus', ph:'על מה? (למשל: עזרה בבית)'},
+    take:{t:'משיכה / תיקון', btn:'הורדה מהקופה', sign:-1, type:'take', ph:'סיבה'},
+    ask:{t:'בקשה מ'+N.parent, btn:'שליחת הבקשה', sign:1, type:'ask', ph:'בשביל מה?'}
+  }[a];
+  let cat = null;
+  openSheet(`<h3>${esc(cfg.t)}</h3>
+    <div class="field big"><label for="am">סכום (₪)</label><input id="am" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
+    ${cfg.cats?`<div class="field"><label>קטגוריה</label><div class="chips">${CATS.map(c=>`<button class="chip" data-c="${c[1]}">${c[0]} ${c[1]}</button>`).join('')}</div></div>`:''}
+    <div class="field"><label for="nt">${cfg.cats?'פירוט (לא חובה)':'הערה'}</label><input id="nt" placeholder="${esc(cfg.ph)}" autocomplete="off"></div>
+    <div class="err" id="er"></div>
+    <button class="primary" id="sv">${esc(cfg.btn)}</button>
+    <button class="ghost" data-close>ביטול</button>`, ()=>{
+    $('#sheet').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ cat = cat===b.dataset.c?null:b.dataset.c; $('#sheet').querySelectorAll('[data-c]').forEach(x=>x.classList.toggle('on',x.dataset.c===cat)); });
+    $('#sv').onclick = async()=>{
+      const v = Math.round((+$('#am').value||0)*100)/100; const note = $('#nt').value.trim();
+      if(!(v>0)){ $('#er').textContent='כמה כסף? צריך סכום גדול מאפס'; return; }
+      if(cfg.sign<0 && v>balance() && !isP){ if(!confirm('זה יותר ממה שיש בקופה. לרשום בכל זאת?')) return; }
+      let ok;
+      if(cfg.type==='ask') ok = await safe(()=>store.addReq({amount:v,note,status:'pending',ts:Date.now()}),'הבקשה נשלחה ל'+N.parent);
+      else ok = await safe(()=>store.addTx({amount:cfg.sign*v,type:cfg.type,note:note||(cfg.cats?(cat||''):''),cat:cat||null,by,ts:Date.now()}), cfg.sign>0?'נוסף לקופה':'נרשם');
+      if(ok) closeSheet();
+    };
+    $('#am').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#sv').click(); });
+  });
+}
+
+function openSettings(){
+  const st = S.settings, kids = (S.me.members||[]).filter(m=>m.role==='child');
+  openSheet(`<h3>הגדרות</h3>
+    <div class="field"><label for="cn">שם הבת</label><input id="cn" value="${esc(st.childName)}"></div>
+    <div class="field"><label for="pl">איך היא קוראת לך?</label><input id="pl" value="${esc(st.parentLabel||'אבא')}"></div>
+    <div class="row2">
+      <div class="field" style="flex:1"><label for="wk">דמי כיס שבועיים (₪)</label><input id="wk" type="number" inputmode="decimal" min="0" value="${+st.weekly||0}"></div>
+      <div class="field" style="flex:1"><label for="pd">ביום</label><select id="pd">${DAYS.map((d,i)=>`<option value="${i}" ${i===(+st.payday||0)?'selected':''}>${d}</option>`).join('')}</select></div>
+    </div>
+    <button class="primary" id="sv">שמירה</button>
+    <h2>המשתמש של ${esc(st.childName)}</h2>
+    ${kids.length ? `
+      <div class="stat" style="margin-bottom:10px"><div class="k">שם המשתמש שלה</div><div style="font-weight:600;font-size:19px">${esc(kids[0].username)}</div></div>
+      <div class="field"><label for="np">סיסמה חדשה בשבילה (אם שכחה)</label><input id="np" type="text" autocomplete="off" style="direction:ltr"></div>
+      <div class="err" id="er"></div>
+      <button class="primary" id="rp" style="background:var(--lilac)">החלפת הסיסמה שלה</button>` : `
+      <div class="field"><label for="cu">שם משתמש בשבילה</label><input id="cu" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="cp">סיסמה בשבילה (לפחות 6 תווים)</label><input id="cp" type="text" autocomplete="off" style="direction:ltr"></div>
+      <div class="err" id="er"></div>
+      <button class="primary" id="mk" style="background:var(--lilac)">יצירת המשתמש שלה</button>`}
+    <button class="ghost" data-close>סגירה</button>`, ()=>{
+    $('#sv').onclick = async()=>{
+      const o = { childName:$('#cn').value.trim()||st.childName, parentLabel:$('#pl').value.trim()||'אבא', weekly:Math.max(0,+$('#wk').value||0), payday:+$('#pd').value };
+      if(await safe(()=>store.updateSettings(o),'נשמר')) closeSheet();
+    };
+    const mk = $('#mk'); if(mk) mk.onclick = async()=>{
+      const u=$('#cu').value, p=$('#cp').value, er=$('#er'); er.textContent='';
+      const bad = checkUser(u); if(bad){ er.textContent=bad; return; }
+      if(p.length<6){ er.textContent='הסיסמה צריכה להיות לפחות 6 תווים'; return; }
+      mk.disabled = true;
+      try{
+        // separate client, so creating her account doesn't log you out
+        const tmp = window.supabase.createClient(CFG.url, CFG.anonKey, { auth:{ persistSession:false, autoRefreshToken:false, storageKey:'kupa-tmp' } });
+        const { data, error } = await tmp.auth.signUp({ email: toEmail(u), password: p, options:{ data:{ username: u.trim() } } });
+        if(error) throw error;
+        if(!data.user || !data.session){ throw new Error('not confirmed'); }
+        await rpc('kupa_add_child', { p_user_id: data.user.id, p_username: u.trim() });
+        S.me = await rpc('kupa_me'); closeSheet();
+        toast('נוצר! שם משתמש: '+u.trim());
+      }catch(e){ er.textContent = authMsg(e); mk.disabled = false; }
+    };
+    const rp = $('#rp'); if(rp) rp.onclick = async()=>{
+      const p=$('#np').value, er=$('#er'); if(p.length<6){ er.textContent='לפחות 6 תווים'; return; }
+      if(await safe(()=>rpc('kupa_reset_child_password', { p_user_id: kids[0].user_id, p_password: p }), 'הסיסמה שלה הוחלפה')) closeSheet();
+    };
+  });
+}
+
+/* ---------- start ---------- */
+if(sb){
+  sb.auth.getSession().then(({data})=>{ S.session = data.session; S.authChecked = true; if(S.session) loadMe(); else render(); });
+  sb.auth.onAuthStateChange((ev, session)=>{
+    const was = S.session && S.session.user.id;
+    S.session = session; S.authChecked = true;
+    if(session && session.user.id !== was){ S.me = null; render(); loadMe(); }
+    else if(!session && was){ stopSync(); S.me=null; role=null; render(); }
+  });
+}
+render();
+})();
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body>
+</html>
