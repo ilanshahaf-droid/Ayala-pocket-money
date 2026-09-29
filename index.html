@@ -134,6 +134,7 @@ h2{font-size:15px;font-weight:600;color:var(--muted);margin:22px 0 8px}
 .total h2{margin:0}
 .total .amt{font-size:18px}
 .hint{font-size:14px;color:var(--muted);margin:-4px 0 14px}
+.brick{width:1.15em;height:1.15em;vertical-align:-.2em;display:inline-block}
 .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
 .toast.on{opacity:1}
 .coin{animation:drop .6s cubic-bezier(.3,1.4,.6,1)}
@@ -154,7 +155,8 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmt = n => { const r = Math.round(n*100)/100; return (Number.isInteger(r) ? r : r.toFixed(2)); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-const CATS = [['🍬','ממתקים'],['🎮','משחקים'],['👕','בגדים'],['🎁','מתנה למישהו'],['🍕','אוכל'],['🎟️','בילוי'],['📚','ספרים/ציוד'],['✨','אחר']];
+const BRICK = '<svg class="brick" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4" width="5.5" height="4" rx="1.2" fill="#E0443A" stroke="#9E211B" stroke-width="1.2"/><rect x="14" y="4" width="5.5" height="4" rx="1.2" fill="#E0443A" stroke="#9E211B" stroke-width="1.2"/><rect x="2" y="7.5" width="20" height="12.5" rx="2" fill="#D8322B" stroke="#9E211B" stroke-width="1.2"/><rect x="4.5" y="10" width="15" height="1.6" rx=".8" fill="#fff" opacity=".35"/></svg>';
+const CATS = [['🍬','ממתקים'],[BRICK,'לגו'],['🎮','משחקים'],['👕','בגדים'],['🎁','מתנה למישהו'],['🍕','אוכל'],['🎟️','בילוי'],['📚','ספרים/ציוד'],['✨','אחר']];
 
 
 let role = null;
